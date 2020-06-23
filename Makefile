@@ -24,7 +24,8 @@ LDLIBS = -ldl
 LDFLAGS = -Wl,--build-id=sha1
 GREP_SHA1 = egrep -o '\b[0-9a-f]{40}\b'
 
-all: build-id so-build-id dlopen-build-id
+all: build-id so-build-id dlopen-build-id ld-build-id
+
 
 build-id: test.o build-id.o
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
@@ -34,6 +35,15 @@ so-build-id: so-test.o libbuild-id.so
 
 dlopen-build-id: dlopen-test.o
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+ld-build-id: ld-build-id.o
+	$(LD) --verbose | sed -r \
+	-e '1,/^==/d' \
+	-e '/^==/,$$d' \
+	-e 's|([*][(].note.gnu.build-id[)])|__note_gnu_build_id_begin = .; \1; __note_gnu_build_id_end = .;|' \
+	>ld-build-id.ld
+	$(CC) $(LDFLAGS) -Wl,--script=ld-build-id.ld ld-build-id.o -o $@ $(LDLIBS)
+
 
 shared-build-id.o: build-id.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $^ -o $@
@@ -50,6 +60,9 @@ so-build-id-test.expected: libbuild-id.so
 dlopen-build-id-test.expected: libbuild-id.so
 	file $< | $(GREP_SHA1) >$@
 
+ld-build-id-test.expected: ld-build-id
+	file $< | $(GREP_SHA1) &> $@
+
 build-id-test.result: build-id
 	./$< | $(GREP_SHA1) >$@
 
@@ -59,11 +72,16 @@ so-build-id-test.result: so-build-id libbuild-id.so
 dlopen-build-id-test.result: dlopen-build-id libbuild-id.so
 	./$< | $(GREP_SHA1) >$@
 
-check: build-id-test.expected so-build-id-test.expected dlopen-build-id-test.expected build-id-test.result so-build-id-test.result dlopen-build-id-test.result
+ld-build-id-test.result: ld-build-id
+	./$< | $(GREP_SHA1) &> $@
+
+
+check: build-id-test.expected so-build-id-test.expected dlopen-build-id-test.expected build-id-test.result so-build-id-test.result dlopen-build-id-test.result ld-build-id-test.expected ld-build-id-test.result
 	cmp build-id-test.expected build-id-test.result
 	cmp so-build-id-test.expected so-build-id-test.result
 	cmp dlopen-build-id-test.expected dlopen-build-id-test.result
+	cmp ld-build-id-test.expected ld-build-id-test.result
 	@echo PASS
 
 clean:
-	rm -f build-id so-build-id dlopen-build-id libbuild-id.so *.o *.result *.expected
+	$(RM) build-id so-build-id dlopen-build-id ld-build-id ld-build-id.ld libbuild-id.so *.o *.result *.expected
