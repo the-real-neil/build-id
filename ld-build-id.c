@@ -8,28 +8,20 @@
 #include <string.h>
 
 #if UINT_MAX == ULONG_MAX
-typedef struct {
-	Elf32_Word namesz;
-	Elf32_Word descsz;
-	Elf32_Word type;
-} Elf_Note;
+typedef Elf32_Nhdr Elf_Nhdr;
 #else
-typedef struct {
-	Elf64_Word namesz;
-	Elf64_Word descsz;
-	Elf64_Word type;
-} Elf_Note;
+typedef Elf64_Nhdr Elf_Nhdr;
 #endif
 
-#define ELFNOTE_ALIGN(_n_) (((_n_)+3)&~3)
-#define ELFNOTE_NAME(_n_) ((char*)(_n_) + sizeof(*(_n_)))
-#define ELFNOTE_DESC(_n_) (ELFNOTE_NAME(_n_) + ELFNOTE_ALIGN((_n_)->namesz))
+#define ELFNOTE_ALIGN(_n_) (((_n_) + 3) & ~3)
+#define ELFNOTE_NAME(_n_) ((char *)(_n_) + sizeof(*(_n_)))
+#define ELFNOTE_DESC(_n_) (ELFNOTE_NAME(_n_) + ELFNOTE_ALIGN((_n_)->n_namesz))
 
 /* Defined in linker script. */
 extern const unsigned char __note_gnu_build_id_begin[];
 extern const unsigned char __note_gnu_build_id_end[];
 
-int main(int argc, char**argv){
+int main(int argc, char ** argv) {
   (void)argc;
   (void)argv;
   assert((size_t)__note_gnu_build_id_begin < (size_t)__note_gnu_build_id_end);
@@ -38,28 +30,29 @@ int main(int argc, char**argv){
 
   const size_t len = (size_t)(__note_gnu_build_id_end - __note_gnu_build_id_begin);
   for (size_t idx = 0; idx < len; ++idx) {
-    printf("__note_gnu_build_id_begin[%2ld]: 0x%02x\n", idx, (unsigned char)__note_gnu_build_id_begin[idx]);
+    printf("__note_gnu_build_id_begin[%2ld]: 0x%02x\n", idx,
+           (unsigned char)__note_gnu_build_id_begin[idx]);
   }
 
-  printf("sizeof(Elf_Note): %ld\n", sizeof(Elf_Note));
-  const Elf_Note *note = (void*)__note_gnu_build_id_begin;
-  assert(len == sizeof(Elf_Note) + note->namesz + note->descsz);
+  printf("sizeof(Elf_Nhdr): %ld\n", sizeof(Elf_Nhdr));
+  const Elf_Nhdr * note = (void *)__note_gnu_build_id_begin;
+  assert(len == sizeof(Elf_Nhdr) + note->n_namesz + note->n_descsz);
 
-  printf("note->namesz: %d\n", note->namesz);
-  printf("note->descsz: %d\n", note->descsz);
-  printf("note->type: %#06x\n", note->type);
+  printf("note->n_namesz: %d\n", note->n_namesz);
+  printf("note->n_descsz: %d\n", note->n_descsz);
+  printf("note->n_type: %#06x\n", note->n_type);
 
-  char name[note->namesz];
-  memcpy(name,ELFNOTE_NAME(note), note->namesz);
-  assert(!strncmp("GNU", name, note->namesz));
+  char name[note->n_namesz];
+  memcpy(name, ELFNOTE_NAME(note), note->n_namesz);
+  assert(!strncmp("GNU", name, note->n_namesz));
   // printf("name: %s\n", name);
-  
-  assert(NT_GNU_BUILD_ID == note->type);
 
-  unsigned char desc[note->descsz];
-  memcpy(desc,ELFNOTE_DESC(note), note->descsz);
+  assert(NT_GNU_BUILD_ID == note->n_type);
+
+  unsigned char desc[note->n_descsz];
+  memcpy(desc, ELFNOTE_DESC(note), note->n_descsz);
   printf("Build ID: ");
-  for (size_t idx = 0; idx < note->descsz; ++idx) {
+  for (size_t idx = 0; idx < note->n_descsz; ++idx) {
     printf("%02x", desc[idx]);
   }
   printf("\n");
