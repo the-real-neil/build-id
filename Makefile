@@ -61,7 +61,7 @@ dlopen-build-id-test.expected: libbuild-id.so
 	file $< | $(GREP_SHA1) >$@
 
 ld-build-id-test.expected: ld-build-id
-	file $< | $(GREP_SHA1) &> $@
+	file $< | $(GREP_SHA1) >$@
 
 build-id-test.result: build-id
 	./$< | $(GREP_SHA1) >$@
@@ -73,7 +73,7 @@ dlopen-build-id-test.result: dlopen-build-id libbuild-id.so
 	./$< | $(GREP_SHA1) >$@
 
 ld-build-id-test.result: ld-build-id
-	./$< | $(GREP_SHA1) &> $@
+	./$< | $(GREP_SHA1) >$@
 
 
 check: build-id-test.expected so-build-id-test.expected dlopen-build-id-test.expected build-id-test.result so-build-id-test.result dlopen-build-id-test.result ld-build-id-test.expected ld-build-id-test.result
