@@ -1,7 +1,9 @@
-*.o
 *.expected
+*.o
 *.result
 build-id
+dlopen-build-id
+ld-build-id
+ld-build-id.ld
 libbuild-id.so
 so-build-id
-dlopen-build-id
