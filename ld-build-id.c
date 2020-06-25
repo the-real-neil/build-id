@@ -64,15 +64,12 @@
 #include <assert.h>
 #include <elf.h>
 #include <limits.h>
+#include <link.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#if UINT_MAX == ULONG_MAX
-typedef Elf32_Nhdr Elf_Nhdr;
-#else
-typedef Elf64_Nhdr Elf_Nhdr;
-#endif
+typedef ElfW(Nhdr) Elf_Nhdr;
 
 #define ELFNOTE_ALIGN(_n_) (((_n_) + 3) & ~3)
 #define ELFNOTE_NAME(_n_) ((char *)(_n_) + sizeof(*(_n_)))
