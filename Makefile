@@ -21,7 +21,7 @@
 
 CFLAGS += -fPIC
 LDLIBS = -ldl
-LDFLAGS = -Wl,--build-id=sha1
+LDFLAGS += -Wl,--build-id=sha1
 GREP_SHA1 = egrep -o '\b[0-9a-f]{40}\b'
 
 all: build-id so-build-id dlopen-build-id ld-build-id
