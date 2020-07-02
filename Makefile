@@ -36,10 +36,18 @@ so-build-id: so-test.o libbuild-id.so
 dlopen-build-id: dlopen-test.o
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
+# How to generate the default linker script:
+#
+# ld		: `ld --verbose`
+# ld.gold	: ???
+# ld.bfd	: ???
+# ld.lld	: ???
+#
+# sed expression assumes default linker script from GNU binutils ld
 ld-build-id: ld-build-id.o
 	$(LD) --verbose | sed -r \
-	-e '1,/^==/d' \
-	-e '/^==/,$$d' \
+	-e '1,/^={50}$$/d' \
+	-e '/^={50}$$/,$$d' \
 	-e 's|([*][(].note.gnu.build-id[)])|__note_gnu_build_id_begin = .; \1; __note_gnu_build_id_end = .;|' \
 	>ld-build-id.ld
 	$(CC) $(LDFLAGS) -Wl,--script=ld-build-id.ld ld-build-id.o -o $@ $(LDLIBS)
