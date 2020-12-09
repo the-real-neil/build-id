@@ -62,9 +62,9 @@ build_id_data(const struct build_id_note *note);
 
 ## Examples
 Some demonstrations of the API are provided:
-  * [test.c](test.c) - Retrieves its own build-id
-  * [so-test.c](so-test.c) - Retrieves the build-id of a linked shared object
-  * [dlopen-test.c](dlopen-test.c) - Retrieves the build-id of a `dlopen`'d shared object
+  * [test-build-id.c](test-build-id.c) - Retrieves its own build-id
+  * [test-build-id-so.c](test-build-id-so.c) - Retrieves the build-id of a linked shared object
+  * [test-build-id-dlopen.c](test-build-id-dlopen.c) - Retrieves the build-id of a `dlopen`'d shared object
 
 ```sh
 $ ./build-id
@@ -77,7 +77,7 @@ Build ID: 79588ab64fe9fe95bce4243e26aee4449517434e
 
 Separately, the `file` command can retrieve the build-ids:
 ```sh
-$ file build-id
+$ file test-build-id
 build-id: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=5a9f352b656d36bd95b0cec8a31679dac872f5be, for GNU/Linux 3.2.0, with debug_info, not stripped
 $ file libbuild-id.so 
 libbuild-id.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=79588ab64fe9fe95bce4243e26aee4449517434e, not stripped

@@ -19,22 +19,40 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-CFLAGS += -fPIC
-LDLIBS = -ldl
-LDFLAGS += -Wl,--build-id=sha1
+.POSIX:
+
+CC = cc
+CFLAGS = -O -fPIC -Werror -Wall
+LD = ld
+LDFLAGS += -ldl -Wl,--build-id=sha1
 GREP_SHA1 = egrep -o '\b[0-9a-f]{40}\b'
 
-all: build-id so-build-id dlopen-build-id ld-build-id
+# let gnu make use posix make variables
+.TARGET = $@
+.ALLSRC = $^
 
+SRCS = \
+  test-build-id-dlopen.c \
+  test-build-id-ld.c \
+  test-build-id-so.c \
+  test-build-id.c
 
-build-id: test.o build-id.o
-	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+all: $(SRCS:.c=)
 
-so-build-id: so-test.o libbuild-id.so
-	$(CC) $(LDFLAGS) $^ -o $@
+################################################################################
 
-dlopen-build-id: dlopen-test.o
-	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+test-build-id: test-build-id.o build-id.o
+	$(LINK.c) $(.ALLSRC) -o $(.TARGET)
+
+test-build-id-dlopen: test-build-id-dlopen.o
+	$(LINK.c) $(.ALLSRC) -o $(.TARGET)
+
+test-build-id-so: test-build-id-so.o libbuild-id.so
+	$(LINK.c) $(.ALLSRC) -o $(.TARGET)
+
+# abuse the whitespace between .ALLSRC elements
+test-build-id-ld: ld-build-id.ld test-build-id-ld.o
+	$(LINK.c) -Wl,--script=$(.ALLSRC) -o $(.TARGET)
 
 # How to generate the default linker script:
 #
@@ -44,52 +62,57 @@ dlopen-build-id: dlopen-test.o
 # ld.lld	: ???
 #
 # sed expression assumes default linker script from GNU binutils ld
-ld-build-id: ld-build-id.o
+ld-build-id.ld:
 	$(LD) --verbose | sed -r \
 	-e '1,/^={50}$$/d' \
 	-e '/^={50}$$/,$$d' \
 	-e 's|([*][(].note.gnu.build-id[)])|__note_gnu_build_id_begin = .; \1; __note_gnu_build_id_end = .;|' \
-	>ld-build-id.ld
-	$(CC) $(LDFLAGS) -Wl,--script=ld-build-id.ld ld-build-id.o -o $@ $(LDLIBS)
+	>$(.TARGET)
 
+################################################################################
 
-shared-build-id.o: build-id.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $^ -o $@
+build-id.o: build-id.c
+	$(COMPILE.c) $(.ALLSRC) -o $(.TARGET)
 
-libbuild-id.so: shared-build-id.o
-	$(CC) $(LDFLAGS) -shared $^ -o $@ $(LDLIBS)
+libbuild-id.so: build-id.o
+	$(LINK.c) -shared $(.ALLSRC) -o $(.TARGET)
 
-build-id-test.expected: build-id
-	file $< | $(GREP_SHA1) >$@
+################################################################################
 
-so-build-id-test.expected: libbuild-id.so
-	file $< | $(GREP_SHA1) >$@
+test-build-id.want: test-build-id
+	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
-dlopen-build-id-test.expected: libbuild-id.so
-	file $< | $(GREP_SHA1) >$@
+test-build-id-dlopen.want: libbuild-id.so
+	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
-ld-build-id-test.expected: ld-build-id
-	file $< | $(GREP_SHA1) >$@
+test-build-id-so.want: libbuild-id.so
+	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
-build-id-test.result: build-id
-	./$< | $(GREP_SHA1) >$@
+test-build-id-ld.want: test-build-id-ld
+	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
-so-build-id-test.result: so-build-id libbuild-id.so
-	LD_LIBRARY_PATH=. ./$< | $(GREP_SHA1) >$@
+################################################################################
 
-dlopen-build-id-test.result: dlopen-build-id libbuild-id.so
-	./$< | $(GREP_SHA1) >$@
+test-build-id.got: test-build-id
+	./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
-ld-build-id-test.result: ld-build-id
-	./$< | $(GREP_SHA1) >$@
+test-build-id-dlopen.got: test-build-id-dlopen libbuild-id.so
+	./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
+test-build-id-ld.got: test-build-id-ld
+	./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
-check: build-id-test.expected so-build-id-test.expected dlopen-build-id-test.expected build-id-test.result so-build-id-test.result dlopen-build-id-test.result ld-build-id-test.expected ld-build-id-test.result
-	cmp build-id-test.expected build-id-test.result
-	cmp so-build-id-test.expected so-build-id-test.result
-	cmp dlopen-build-id-test.expected dlopen-build-id-test.result
-	cmp ld-build-id-test.expected ld-build-id-test.result
+test-build-id-so.got: test-build-id-so libbuild-id.so
+	LD_LIBRARY_PATH=. ./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
+
+################################################################################
+
+check: $(SRCS:.c=.want) $(SRCS:.c=.got)
+	cmp test-build-id.want test-build-id.got
+	cmp test-build-id-dlopen.want test-build-id-dlopen.got
+	cmp test-build-id.want test-build-id.got
+	cmp test-build-id.want test-build-id.got
 	@echo PASS
 
 clean:
-	$(RM) build-id so-build-id dlopen-build-id ld-build-id ld-build-id.ld libbuild-id.so *.o *.result *.expected
+	rm -f $(SRCS:.c=) $(SRCS:.c=.got) $(SRCS:.c=.want) *.o *.so *.ld
