@@ -44,10 +44,10 @@ all: $(SRCS:.c=)
 test-build-id: test-build-id.o build-id.o
 	$(LINK.c) $(.ALLSRC) -o $(.TARGET)
 
-test-build-id-dlopen: test-build-id-dlopen.o
+test-build-id-so: test-build-id-so.o libbuild-id.so
 	$(LINK.c) $(.ALLSRC) -o $(.TARGET)
 
-test-build-id-so: test-build-id-so.o libbuild-id.so
+test-build-id-dlopen: test-build-id-dlopen.o
 	$(LINK.c) $(.ALLSRC) -o $(.TARGET)
 
 # abuse the whitespace between .ALLSRC elements
@@ -82,10 +82,10 @@ libbuild-id.so: build-id.o
 test-build-id.want: test-build-id
 	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
-test-build-id-dlopen.want: libbuild-id.so
+test-build-id-so.want: libbuild-id.so
 	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
-test-build-id-so.want: libbuild-id.so
+test-build-id-dlopen.want: libbuild-id.so
 	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
 test-build-id-ld.want: test-build-id-ld
@@ -96,22 +96,22 @@ test-build-id-ld.want: test-build-id-ld
 test-build-id.got: test-build-id
 	./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
+test-build-id-so.got: test-build-id-so libbuild-id.so
+	LD_LIBRARY_PATH=. ./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
+
 test-build-id-dlopen.got: test-build-id-dlopen libbuild-id.so
 	./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
 test-build-id-ld.got: test-build-id-ld
 	./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
 
-test-build-id-so.got: test-build-id-so libbuild-id.so
-	LD_LIBRARY_PATH=. ./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
-
 ################################################################################
 
 check: $(SRCS:.c=.want) $(SRCS:.c=.got)
 	cmp test-build-id.want test-build-id.got
+	cmp test-build-id-so.want test-build-id-so.got
 	cmp test-build-id-dlopen.want test-build-id-dlopen.got
-	cmp test-build-id.want test-build-id.got
-	cmp test-build-id.want test-build-id.got
+	cmp test-build-id-ld.want test-build-id-ld.got
 	@echo PASS
 
 clean:
