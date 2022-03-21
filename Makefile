@@ -21,10 +21,10 @@
 
 .POSIX:
 
-CC = cc
-CFLAGS = -O -fPIC -Werror -Wall
-LD = ld
-LDFLAGS += -ldl -Wl,--build-id=sha1
+CC ?= cc
+CFLAGS += -O -fPIC -Werror -Wall
+LD ?= ld
+LDFLAGS += -Wl,--build-id=sha1
 GREP_SHA1 = egrep -o '\b[0-9a-f]{40}\b'
 
 # let gnu make use posix make variables
@@ -41,18 +41,20 @@ all: $(SRCS:.c=)
 
 ################################################################################
 
-test-build-id: test-build-id.o build-id.o
-	$(LINK.c) $(.ALLSRC) -o $(.TARGET)
+# test-build-id
+test-build-id: LDLIBS += -ldl
+test-build-id: build-id.o
 
-test-build-id-so: test-build-id-so.o libbuild-id.so
-	$(LINK.c) $(.ALLSRC) -o $(.TARGET)
+# test-build-id-so
+test-build-id-so: LDLIBS += -ldl libbuild-id.so
+test-build-id-so: libbuild-id.so
 
-test-build-id-dlopen: test-build-id-dlopen.o
-	$(LINK.c) $(.ALLSRC) -o $(.TARGET)
+# test-build-id-dlopen
+test-build-id-dlopen: LDLIBS += -ldl
 
-# abuse the whitespace between .ALLSRC elements
+# test-build-id-ld: LDFLAGS += -Wl,--script=ld-build-id.ld
 test-build-id-ld: ld-build-id.ld test-build-id-ld.o
-	$(LINK.c) -Wl,--script=$(.ALLSRC) -o $(.TARGET)
+	$(LINK.c) -Wl,--script=ld-build-id.ld test-build-id-ld.o -o $@
 
 # How to generate the default linker script:
 #
@@ -63,11 +65,12 @@ test-build-id-ld: ld-build-id.ld test-build-id-ld.o
 #
 # sed expression assumes default linker script from GNU binutils ld
 ld-build-id.ld:
-	$(LD) --verbose | sed -r \
-	-e '1,/^={50}$$/d' \
-	-e '/^={50}$$/,$$d' \
-	-e 's|([*][(].note.gnu.build-id[)])|__note_gnu_build_id_begin = .; \1; __note_gnu_build_id_end = .;|' \
-	>$(.TARGET)
+	ld --verbose \
+		| sed -E \
+			-e '1,/^={50}$$/d' \
+			-e '/^={50}$$/,$$d' \
+			-e 's|([*][(].note.gnu.build-id[)])|__note_gnu_build_id_begin = .; \1; __note_gnu_build_id_end = .;|' \
+			>$@
 
 ################################################################################
 
