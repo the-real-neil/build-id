@@ -70,6 +70,16 @@
 #include <elf.h>
 #include <link.h>
 
+// The 'ElfW' macro is defined in 'link.h':
+//
+//    We use this macro to refer to ELF types independent of the native
+//    wordsize.  `ElfW(TYPE)' is used in place of `Elf32_TYPE' or `Elf64_TYPE'.
+//
+// Abuse 'TYPE' to hold 'Nhdr' and (on a 64-bit platform) force the
+// preprocessor to emit
+//
+//    typedef Elf64_Nhdr Elf_Nhdr;
+//
 typedef ElfW(Nhdr) Elf_Nhdr;
 
 #define ELFNOTE_ALIGN(_n_) (((_n_) + 3) & ~3)
