@@ -62,38 +62,39 @@
 // * https://stackoverflow.com/questions/19912881/how-to-tell-force-gnu-ld-to-put-a-section-symbol-in-a-specific-part-of-the-out
 
 #include <assert.h>
-#include <elf.h>
 #include <limits.h>
-#include <link.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <elf.h>
+#include <link.h>
+
 typedef ElfW(Nhdr) Elf_Nhdr;
 
 #define ELFNOTE_ALIGN(_n_) (((_n_) + 3) & ~3)
-#define ELFNOTE_NAME(_n_) ((char *)(_n_) + sizeof(*(_n_)))
+#define ELFNOTE_NAME(_n_) ((char*) (_n_) + sizeof(*(_n_)))
 #define ELFNOTE_DESC(_n_) (ELFNOTE_NAME(_n_) + ELFNOTE_ALIGN((_n_)->n_namesz))
 
 /* Defined in linker script. */
 extern const unsigned char __note_gnu_build_id_begin[];
 extern const unsigned char __note_gnu_build_id_end[];
 
-int main(int argc, char ** argv) {
-  (void)argc;
-  (void)argv;
-  assert((size_t)__note_gnu_build_id_begin < (size_t)__note_gnu_build_id_end);
-  printf("__note_gnu_build_id_begin : %#0lx\n", (size_t)__note_gnu_build_id_begin);
-  printf("__note_gnu_build_id_end   : %#0lx\n", (size_t)__note_gnu_build_id_end);
+int main(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
+  assert((size_t) __note_gnu_build_id_begin < (size_t) __note_gnu_build_id_end);
+  printf("__note_gnu_build_id_begin : %#0lx\n", (size_t) __note_gnu_build_id_begin);
+  printf("__note_gnu_build_id_end   : %#0lx\n", (size_t) __note_gnu_build_id_end);
 
-  const size_t len = (size_t)(__note_gnu_build_id_end - __note_gnu_build_id_begin);
+  const size_t len = (size_t) (__note_gnu_build_id_end - __note_gnu_build_id_begin);
   for (size_t idx = 0; idx < len; ++idx) {
     printf("__note_gnu_build_id_begin[%2ld]: 0x%02x\n", idx,
-           (unsigned char)__note_gnu_build_id_begin[idx]);
+           (unsigned char) __note_gnu_build_id_begin[idx]);
   }
 
   printf("sizeof(Elf_Nhdr): %ld\n", sizeof(Elf_Nhdr));
-  const Elf_Nhdr * note = (void *)__note_gnu_build_id_begin;
+  const Elf_Nhdr* note = (void*) __note_gnu_build_id_begin;
   assert(len == sizeof(Elf_Nhdr) + note->n_namesz + note->n_descsz);
 
   printf("note->n_namesz: %d\n", note->n_namesz);
