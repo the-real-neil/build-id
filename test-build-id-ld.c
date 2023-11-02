@@ -82,6 +82,12 @@
 //
 typedef ElfW(Nhdr) Elf_Nhdr;
 
+// These macros appear within several prominent projects, including but not
+// limited to the following:
+//
+//   https://github.com/xen-project/xen/blob/7befef87cc9b1bb8ca15d866ce1ecd9165ccb58c/xen/include/xen/elf.h#L32
+//   https://github.com/elfmaster/ecfs/blob/175806336b9c1b815e03e0b8c06f949aa333da51/include/ecfs.h#L127
+//
 #define ELFNOTE_ALIGN(_n_) (((_n_) + 3) & ~3)
 #define ELFNOTE_NAME(_n_) ((char*) (_n_) + sizeof(*(_n_)))
 #define ELFNOTE_DESC(_n_) (ELFNOTE_NAME(_n_) + ELFNOTE_ALIGN((_n_)->n_namesz))
