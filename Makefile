@@ -25,11 +25,6 @@ CC ?= cc
 CFLAGS += -O -fPIC -Werror -Wall
 LD ?= ld
 LDFLAGS += -Wl,--build-id=sha1
-GREP_SHA1 = egrep -o '\b[0-9a-f]{40}\b'
-
-# let gnu make use posix make variables
-.TARGET = $@
-.ALLSRC = $^
 
 SRCS = \
   test-build-id-dlopen.c \
@@ -46,15 +41,18 @@ test-build-id: LDLIBS += -ldl
 test-build-id: build-id.o
 
 # test-build-id-so
-test-build-id-so: LDLIBS += -ldl libbuild-id.so
+test-build-id-so: LDLIBS += -ldl
 test-build-id-so: libbuild-id.so
 
 # test-build-id-dlopen
 test-build-id-dlopen: LDLIBS += -ldl
 
-# test-build-id-ld: LDFLAGS += -Wl,--script=ld-build-id.ld
-test-build-id-ld: ld-build-id.ld test-build-id-ld.o
-	$(LINK.c) -Wl,--script=ld-build-id.ld test-build-id-ld.o -o $@
+# test-build-id-ld
+# test-build-id-ld: ld-build-id.ld
+
+test-build-id-ld: LDFLAGS += -Wl,--script=ld-build-id.ld
+test-build-id-ld: test-build-id-ld.o ld-build-id.ld
+	$(LINK.c) $(OUTPUT_OPTION) $<
 
 # How to generate the default linker script:
 #
@@ -74,39 +72,60 @@ ld-build-id.ld:
 
 ################################################################################
 
-build-id.o: build-id.c
-	$(COMPILE.c) $(.ALLSRC) -o $(.TARGET)
-
+libbuild-id.so: LDFLAGS += -shared
 libbuild-id.so: build-id.o
-	$(LINK.c) -shared $(.ALLSRC) -o $(.TARGET)
+	$(LINK.c) $(OUTPUT_OPTION) $^
 
 ################################################################################
 
-test-build-id.want: test-build-id
-	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
+# In general, we can 'file foo' and grep its Build ID to generate 'foo.want'.
+#
+# Note how 'file' takes all targets '$^' rather than the first target
+# '$<'. This is intentional and necessary for the specializations that follow.
+%.want: %
+	file $^ | tac | grep -Eom1 '[[:xdigit:]]{40}' >$@
 
-test-build-id-so.want: libbuild-id.so
-	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
-
+# The shared object is the exception.
+#
+# Note that each of these specializations _appends_ 'libbuild-id.so' to the
+# list of target prerequisites. This causes the previous pattern rule to
+# execute like so:
+#
+#     file test-build-id-dlopen libbuild-id.so | tac | grep -Eom1 '[[:xdigit:]]{40}' >test-build-id-dlopen.want
+#
+#     file test-build-id-so libbuild-id.so | tac | grep -Eom1 '[[:xdigit:]]{40}' >test-build-id-so.want
+#
+# This is the reason why the 'file' output is 'tac'-reversed and 'grep -m1'
+# prints only the first 40-hexit sha1 digest.
 test-build-id-dlopen.want: libbuild-id.so
-	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
-
-test-build-id-ld.want: test-build-id-ld
-	file $(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
+test-build-id-so.want: libbuild-id.so
 
 ################################################################################
 
-test-build-id.got: test-build-id
-	./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
+# In general, we can './foo' and grep its Build ID to generate 'foo.got'.
+#
+# Note how we are abusing '$^' (the space-delimited list of prerequisites): we
+# allow the shell to expand those arguments and invoke the first with any
+# others passed as positional arguments. For generic targets, this is harmless
+# because '$^' is a singleton array. The 'test-build-id-dlopen' overrides this.
+#
+# Note how the make variable 'LD_LIBRARY_PATH' defaults to empty --- which
+# means that the rule body shell variable also defaults to empty. For generic
+# targets, this is harmless and ignored. The 'test-build-id-so' program
+# overrides this.
+#
+%.got: %
+	LD_LIBRARY_PATH="$(LD_LIBRARY_PATH)" ./$^ | grep -Eo '[[:xdigit:]]{40}' >$@
 
-test-build-id-so.got: test-build-id-so libbuild-id.so
-	LD_LIBRARY_PATH=. ./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
-
-test-build-id-dlopen.got: test-build-id-dlopen libbuild-id.so
-	./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
-
-test-build-id-ld.got: test-build-id-ld
-	./$(.ALLSRC) | $(GREP_SHA1) >$(.TARGET)
+# The shared object is (again) the exception.
+#
+# The 'test-build-id-dlopen' program needs the 'libbuild-id.so' as its first
+# argument.
+#
+# The 'test-build-id-so' program needs the 'LD_LIBRARY_PATH=.'.
+#
+test-build-id-dlopen.got: libbuild-id.so
+test-build-id-so.got: LD_LIBRARY_PATH=.
 
 ################################################################################
 
